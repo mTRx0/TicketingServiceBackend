@@ -1,0 +1,59 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["interactiveTransactions"]
+}
+
+generator nexusPrisma {
+   provider = "nexus-prisma"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                      String        @id @default(uuid())
+  name                    String
+  member                  User[]
+  inviteCodes             InviteCode[]
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+}
+
+model User {
+  id                      String        @id @default(uuid())
+  email                   String        @unique
+  given_name              String
+  family_name             String
+  username                String        @unique
+  password                String
+  inviteCodeUsed          InviteCode    @relation("InviteCodeUsed", fields: [inviteCodeUsedId], references: [id])
+  inviteCodeUsedId        String
+  inviteCodesCreated      InviteCode[]  @relation("InviteCodesCreated")
+  organization            Organization  @relation(fields: [organizationId], references: [id])
+  organizationId          String
+  isOrganizationManager   Boolean
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
+}
+
+model InviteCode {
+  id                      String        @id @default(uuid())
+  code                    String        @unique
+  createdBy               User?         @relation("InviteCodesCreated", fields: [createdById], references: [id])
+  createdById             String?
+  organization            Organization  @relation(fields: [organizationId], references: [id])
+  organizationId          String
+  used                    Boolean
+  usedBy                  User?         @relation("InviteCodeUsed")
+  usedById                String?       @unique
+  createdAt               DateTime      @default(now())
+}
+
+model AuthToken {
+  id                      String        @id @default(uuid())
+  userId                  String
+  accessToken             String        @unique
+  refreshToken            String        @unique
+}
