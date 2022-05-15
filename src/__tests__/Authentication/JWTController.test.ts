@@ -31,8 +31,6 @@ describe('Test the JWTAuthenticationController Class', () => {
     const jwtAuthController = new JWTController();
     const authResponse = await jwtAuthController.getAuthResponse(mockedUserObject);
 
-    console.log(authResponse);
-
     expect(authResponse).toEqual(expect.objectContaining({
       accessToken: expect.any(String),
       idToken: expect.any(String),
