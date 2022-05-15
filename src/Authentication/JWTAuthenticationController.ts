@@ -2,14 +2,13 @@ import { User } from '@prisma/client';
 import { ErrorName } from '../ErrorHandling/ErrorType';
 import { AuthResponse } from '../Interfaces/AuthResponse';
 import { DataValidator } from '../Utils/DataValidator';
+import dotenv from 'dotenv';
 
-import { promises as fs } from "fs";
 import jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
 import { context } from '../context';
 
-const privateKeyPath = 'keys/id_rsa';
-const publicKeyPath = 'keys/id_rsa.pub';
+dotenv.config();
 
 /**
  * Creates a new AuthenticationController which handles everything authentication related
@@ -89,7 +88,7 @@ export class JWTController {
   private async getIdToken(user: User): Promise<string> {
     const idTokenPayload: IdTokenPayload = this.getIdTokenPayload(user);
     const keys = await this.getKeys();
-
+    
     return await jwt.sign(idTokenPayload, keys.privateKey, { expiresIn: '10h' });
   }
 
@@ -122,8 +121,8 @@ export class JWTController {
   * @returns {Keys} Returns object containing private and public key
   */
   private async getKeys(): Promise<Keys> {
-    const privateKey = Buffer.from(await fs.readFile(privateKeyPath))
-    const publicKey = Buffer.from(await fs.readFile(publicKeyPath))
+    const privateKey = Buffer.from(process.env.JWT_PRIVATE_KEY as string, 'base64')
+    const publicKey = Buffer.from(process.env.JWT_PUBLIC_KEY as string, 'base64')
     return {
       privateKey,
       publicKey
