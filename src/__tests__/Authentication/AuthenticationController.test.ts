@@ -39,7 +39,7 @@ describe('Test the AuthenticationController Class', () => {
 
     await expect(authController.login())
     .rejects
-    .toThrow(ErrorName.INVALID_ARGUMENTS);
+    .toThrow(ErrorName.INCORRECT_DATA);
   });
 
   it('should throw error on login if wrong password is provided', async () => {
@@ -85,7 +85,7 @@ describe('Test the AuthenticationController Class', () => {
 
     await expect(authController.register())
     .rejects
-    .toThrow(ErrorName.INVALID_ARGUMENTS);
+    .toThrow(ErrorName.INCORRECT_DATA);
   });
 
   it('should register new user and return it', async () => {
