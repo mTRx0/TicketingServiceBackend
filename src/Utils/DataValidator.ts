@@ -44,7 +44,7 @@ export class DataValidator {
   * @returns {boolean} Indicates whether provided username is valid
   */
   public static validateUsername(username: string): boolean {
-    const usernameRegex = /[a-z][a-z]{6,32}/;
+    const usernameRegex = /[a-z]{6,32}/;
     return usernameRegex.test(username);
   }
 }

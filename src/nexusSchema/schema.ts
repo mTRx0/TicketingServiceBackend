@@ -8,14 +8,12 @@ import { UserType } from './User';
 import { InviteCodeType } from './InviteCode';
 import { OrganizationType } from './Organization';
 import { Query } from './Query';
-import { AuthenticationMutation } from './Authentication';
 
 export const DateTime = asNexusMethod(DateTimeResolver, 'date')
 
 export const schema = makeSchema({
   types: [
     Query,
-    AuthenticationMutation,
     UserType,
     InviteCodeType,
     OrganizationType,

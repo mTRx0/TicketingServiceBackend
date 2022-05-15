@@ -1,16 +1,25 @@
 import {
   objectType, stringArg,
 } from 'nexus'
-import { Context } from '../context'
+import { GraphQLContext } from '../context'
 
 import { UserType } from './User'
 
 export const Query = objectType({
   name: 'Query',
   definition(t) {
+    t.nonNull.field('me', {
+      type: UserType,
+      resolve: (_, __, context: GraphQLContext) => {
+        return context.prisma.user.findUnique({
+          where: { id: context.userId || undefined }
+        })
+      },
+    })
+
     t.nonNull.list.nonNull.field('allUsers', {
       type: UserType,
-      resolve: (_, __, context: Context) => {
+      resolve: (_, __, context: GraphQLContext) => {
         return context.prisma.user.findMany()
       },
     })
@@ -20,7 +29,7 @@ export const Query = objectType({
       args: {
         id: stringArg(),
       },
-      resolve: (_, { id }, context: Context) => {
+      resolve: (_, { id }, context: GraphQLContext) => {
         return context.prisma.user.findUnique({
           where: { id: id || undefined }
         })

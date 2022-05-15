@@ -1,12 +1,13 @@
-import { User } from '@prisma/client';
+import { User, RefreshToken } from '@prisma/client';
 import { ErrorName } from '../ErrorHandling/ErrorType';
-import { AuthResponse } from '../Interfaces/AuthResponse';
+import { AuthResponse, IdAuthResponse, AccessTokenPayload, IdTokenPayload, Keys, newRefreshToken } from '../Interfaces';
+
 import { DataValidator } from '../Utils/DataValidator';
 import dotenv from 'dotenv';
 
 import jwt from 'jsonwebtoken';
 import { randomBytes } from 'crypto';
-import { context } from '../context';
+import { DatabaseController } from '../Database/DatabaseController';
 
 dotenv.config();
 
@@ -22,19 +23,88 @@ export class JWTController {
   * @param {User} user object of the user data used to create JWT
   * @returns {AuthResponse} object containing access token, id token and refresh token
   */
-  public async getAuthResponse(user: User): Promise<AuthResponse> {
+  public async getIdAuthResponse(user: User): Promise<IdAuthResponse> {
     if (!this.validateInput(user)) { throw Error(ErrorName.INVALID_ARGUMENTS) }
 
-    const accessToken: string = await this.getAccessToken(user.id)
+    const accessToken: string = await this.getAccessToken(user.id);
     const idToken: string = await this.getIdToken(user);
     const refreshToken: string = this.getRefreshToken();
 
-    await this.storeTokens(user.id, { accessToken, refreshToken });
     return {
       accessToken: accessToken,
       idToken: idToken,
       refreshToken: refreshToken
     }
+  }
+
+  /**
+  * Creates and returns a new user object
+  * @public
+  * @async
+  * @param {User} user object of the user data used to create JWT
+  * @returns {AuthResponse} object containing access token, id token and refresh token
+  */
+  public async getAuthResponse(user: User): Promise<AuthResponse> {
+    if (!this.validateInput(user)) { throw Error(ErrorName.INVALID_ARGUMENTS) }
+
+    const accessToken: string = await this.getAccessToken(user.id);
+    const refreshToken: string = this.getRefreshToken();
+
+    return {
+      accessToken: accessToken,
+      refreshToken: refreshToken
+    }
+  }
+
+  /**
+  * Takes refresh token as input and returns a new AuthResponse object containing a new valid access token
+  * @public
+  * @async
+  * @param {string} refreshToken refresh token used to refresh the access token
+  * @returns {AuthResponse} object containing access token, id token and refresh token
+  */
+  public async refresh(refreshToken: string): Promise<AuthResponse> {
+    const dbController = new DatabaseController();
+    await dbController.deleteExpiredRefreshTokens();
+
+    const foundRefreshToken: RefreshToken | null = await dbController.retrieveRefreshTokenData(refreshToken);
+    if (foundRefreshToken === null || undefined) { throw Error(ErrorName.INVALID_REFRESH_TOKEN) }
+
+    if (foundRefreshToken.usedInFamily) {
+      await dbController.deleteRefreshTokenFamily(foundRefreshToken.tokenFamilyId);
+      throw Error(ErrorName.INVALID_REFRESH_TOKEN);
+    }
+
+    const newAccessToken: string = await this.getAccessToken(foundRefreshToken.userId);
+    const newRefreshToken: string = this.getRefreshToken();
+
+    const refreshTokenDatabaseObject: newRefreshToken = {
+      userId: foundRefreshToken.userId,
+      tokenFamilyId: foundRefreshToken.tokenFamilyId,
+      usedInFamily: false,
+      refreshToken: newRefreshToken,
+      // Expires after 7 days
+      validUntil: new Date(Date.now() + 1000 /*sec*/ * 60 /*min*/ * 60 /*hour*/ * 7 /*day*/)
+    }
+
+    await dbController.storeNewRefreshToken(refreshTokenDatabaseObject);
+
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken
+    }
+  }
+
+  /**
+  * Verifies provided access token and returns userId
+  * @public
+  * @param {string} accessToken access token provided
+  * @returns {string} user id of the user the access token belongs to
+  */
+  public verifyAccessToken(accessToken: string): string {
+    const keys = this.getKeys();
+    const payload: AccessTokenPayload = jwt.verify(accessToken, keys.privateKey) as AccessTokenPayload;
+    return payload.sub
   }
 
   /**
@@ -120,7 +190,7 @@ export class JWTController {
   * @async
   * @returns {Keys} Returns object containing private and public key
   */
-  private async getKeys(): Promise<Keys> {
+  private getKeys(): Keys {
     const privateKey = Buffer.from(process.env.JWT_PRIVATE_KEY as string, 'base64')
     const publicKey = Buffer.from(process.env.JWT_PUBLIC_KEY as string, 'base64')
     return {
@@ -138,47 +208,4 @@ export class JWTController {
     const refreshCode: string = randomBytes(128).toString('hex');
     return refreshCode;
   }
-
-  /**
-  * Store tokens in database
-  * @private
-  * @async
-  * @param {string} userId id of the associated user
-  * @param {string} accessToken generated access token
-  * @param {string} refreshToken generated refresh token
-  */
-  private async storeTokens(userId: string, tokens: { accessToken: string, refreshToken: string }) {
-    await context.prisma.authToken.create({
-      data: {
-        userId: userId,
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken
-      }
-    })
-  }
-}
-
-interface AccessTokenPayload {
-  iss: string,
-  sub: string,
-  aud: string,
-}
-
-interface IdTokenPayload {
-  iss: string,
-  sub: string,
-  aud: string,
-  userinfo: {
-    email: string,
-    given_name: string,
-    family_name: string,
-    username: string,
-    organizationId: string,
-    createdAt: Date,
-  }
-}
-
-interface Keys {
-  privateKey: Buffer,
-  publicKey: Buffer
 }

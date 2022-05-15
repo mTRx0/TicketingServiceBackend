@@ -8,3 +8,8 @@ export const context: Context = {
 export type Context = {
   prisma: PrismaClient
 }
+
+export type GraphQLContext = {
+  userId: string,
+  prisma: PrismaClient
+}

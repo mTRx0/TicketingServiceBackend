@@ -98,7 +98,6 @@ describe('Test the AuthenticationController Class', () => {
       createdAt: mockedDate
     }
     const mockedUser = {
-      id: '0afc730c-dc6b-47eb-a1f5-9c0a360ad920',
       email: 'testEmail@email.com',
       given_name: 'Test',
       family_name: 'Name',
@@ -107,8 +106,6 @@ describe('Test the AuthenticationController Class', () => {
       inviteCodeUsedId: mockedInviteCodeBase.id,
       organizationId: mockedInviteCodeBase.organizationId,
       isOrganizationManager: false,
-      createdAt: mockedDate,
-      updatedAt: mockedDate
     }
 
     const authController = new AuthenticationController({
@@ -125,16 +122,10 @@ describe('Test the AuthenticationController Class', () => {
       used: false,
       usedById: null
     })
-    prismaMock.inviteCode.update.mockResolvedValue({
-      ...mockedInviteCodeBase,
-      used: false,
-      usedById: null
-    })
-    prismaMock.user.create.mockResolvedValue(mockedUser)
 
     const user = await authController.register();
 
-    expect(user).toEqual(mockedUser);
+    expect(user).toEqual(expect.objectContaining(mockedUser));
   });
 
   it('should login an existing user and return it', async () => {

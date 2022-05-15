@@ -19,8 +19,6 @@ export const UserType = objectType({
     t.nonNull.field(User.family_name)
     // username of the user
     t.nonNull.field(User.username)
-    // password of the user
-    t.nonNull.field(User.password)
     // the invite code used by the user to access the app
     t.field(User.inviteCodeUsed)
     // the invite codes this user has created

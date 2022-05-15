@@ -5,7 +5,6 @@ import { DataValidator } from '../Utils/DataValidator';
 
 import { v4 as uuidv4 } from 'uuid';
 
-import { NewUser } from '../Interfaces/newUserInterface';
 import { InviteCode, User } from '@prisma/client';
 /**
  * Creates a new AuthenticationController which handles everything authentication related
@@ -42,13 +41,11 @@ export class AuthenticationController {
     this.uuid = uuidv4();
     if (!this.validateInput()) { throw Error(ErrorName.INVALID_ARGUMENTS) }
     
-    const claimedInviteCode = await this.claimInviteCode();
-    if (claimedInviteCode === undefined) { throw Error(ErrorName.INCORRECT_DATA) }
+    const foundInviteCode = await this.findInviteCode();
+    if (foundInviteCode === undefined) { throw Error(ErrorName.INCORRECT_DATA) }
 
-    const newUserObj: NewUser = this.getUserObject(claimedInviteCode);
-    const user: User = await this.createUser(newUserObj);
-
-    return user;
+    const newUserObj: User = this.getUserObject(foundInviteCode);
+    return newUserObj;
   }
 
   /**
@@ -58,7 +55,7 @@ export class AuthenticationController {
   * @returns {User} Returns retrieved User object
   * @throws {ErrorName.INVALID_ARGUMENTS}
   */
-    public async login(): Promise<User> {
+  public async login(): Promise<User> {
     this.mode = AuthMode.login;
     if (!this.validateInput()) { throw Error(ErrorName.INVALID_ARGUMENTS) }
     
@@ -91,7 +88,7 @@ export class AuthenticationController {
   * @param {InviteCode} inviteCode object of the inviteCode used to register this new user
   * @returns {string | undefined} id of the claimed invite code or undefined if no invite code was found
   */
-  private getUserObject(inviteCode: InviteCode): NewUser {
+  private getUserObject(inviteCode: InviteCode): User {
     return {
       id: this.uuid || '',
       email: this.email || '',
@@ -101,7 +98,9 @@ export class AuthenticationController {
       password: this.password || '',
       inviteCodeUsedId: inviteCode.id,
       organizationId: inviteCode.organizationId,
-      isOrganizationManager: false
+      isOrganizationManager: false,
+      createdAt: new Date(),
+      updatedAt: new Date()
     }
   }
 
@@ -111,7 +110,7 @@ export class AuthenticationController {
   * @async
   * @returns {string | undefined} id of the claimed invite code or undefined if no invite code was found
   */
-  private async claimInviteCode(): Promise<InviteCode | undefined > {
+  private async findInviteCode(): Promise<InviteCode | undefined > {
     const inviteCodeObj = await context.prisma.inviteCode.findUnique({
       where: { code: this.inviteCode }
     })
@@ -119,25 +118,7 @@ export class AuthenticationController {
     if (inviteCodeObj === null) {
       return undefined
     }
-
-    await context.prisma.inviteCode.update({ 
-      where: { id: inviteCodeObj.id }, 
-      data: { used: true, usedById: this.uuid }
-    })
     return inviteCodeObj
-  }
-
-  /**
-  * Creates new user in database
-  * @private
-  * @async
-  * @param {NewUser} newUser object of the new users data used to create database record
-  * @returns {User | undefined} Returns created user object
-  */
-  private async createUser(newUser: NewUser): Promise<User> {
-    return await context.prisma.user.create({
-      data: newUser
-    })
   }
 
   /**

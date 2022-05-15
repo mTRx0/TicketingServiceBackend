@@ -23,6 +23,7 @@ jobs:
     env: # Or as an environment variable
       JWT_PRIVATE_KEY: ${{ secrets.JWT_PRIVATE_KEY }}
       JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
+      COOKIE_SECRET: ${{ secrets.COOKIE_SECRET }}
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
